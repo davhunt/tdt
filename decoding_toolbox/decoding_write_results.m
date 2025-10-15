@@ -182,8 +182,8 @@ if cfg.results.write == 1 && strcmpi(cfg.analysis,'searchlight') && ~isperm
                 results.(outputname).output = c;
                 
             else
-                warning('DECODING_WRITE_RESULTS:no_writing_possible',...
-                    'Result %s cannot be written to an image, because the format is not numeric and thus assumes there are several entries per voxel. Writing only as .mat file.',outputname)
+                %warning('DECODING_WRITE_RESULTS:no_writing_possible',...
+                %    'Result %s cannot be written to an image, because the format is not numeric and thus assumes there are several entries per voxel. Writing only as .mat file.',outputname)
                 continue
             end
         end
