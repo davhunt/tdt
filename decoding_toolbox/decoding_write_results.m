@@ -184,6 +184,7 @@ if cfg.results.write == 1 && strcmpi(cfg.analysis,'searchlight') && ~isperm
             else
                 %warning('DECODING_WRITE_RESULTS:no_writing_possible',...
                 %    'Result %s cannot be written to an image, because the format is not numeric and thus assumes there are several entries per voxel. Writing only as .mat file.',outputname)
+                % Mute this warning, don't need confusion matrix in nifti format
                 continue
             end
         end
