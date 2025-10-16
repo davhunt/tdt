@@ -12,8 +12,14 @@ subject_num = num2str(subject_num, '%03d');
 vox_radius = 3;
 %subfolder = 'breakpoint_rts_unsmoothed_native';
 num_workers = 34; % could pass this in to function?
-base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
-%base_folder = ['/Volumes/data1']; % Or on habilis
+
+if exist('/N/slate/brainevo/Implicit_Learning') == 7
+    base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
+elseif exist('/Volumes/data1') == 7
+    base_folder = ['/Volumes/data1']; % Or on habilis
+else
+    error('Can''t find base folder, are we on habilis or the HPC?');
+end
 
 % create perm dir, write to log
 if ~isfolder([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'])
