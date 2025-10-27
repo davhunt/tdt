@@ -1,23 +1,40 @@
-function [] = gng_permutations_parallel_all_splits_slate_durs_native(subject_num, num_permutations, num_cv_splits)
+function [] = gng_permutations_parallel_all_splits_slate_durs_native(subject_num, num_permutations, num_cv_splits, subfolder)
 
 tStart = tic;
 
 % set global parameters
 vox_radius = 3;
-subfolder = 'durations_unsmoothed_native';
+%subfolder = 'durations_unsmoothed_native';
+%subfolder = 'breakpoint_rts_unsmoothed_native';
 num_workers = 34; % could pass this in to function?
 
-% create perm dir, write to log
-if ~isfolder(['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm'])
-    mkdir(['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm']);
+if exist('/N/slate/brainevo/Implicit_Learning') == 7
+    base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
+elseif exist('/Volumes/data1') == 7
+    base_folder = ['/Volumes/data1']; % Or on habilis
+else
+    error('Can''t find base folder, are we on habilis or the HPC?');
 end
-info_txt = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm/info.txt'];
+
+% create perm dir, write to log
+if ~isfolder([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm'])
+    mkdir([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm']);
+end
+info_txt = [base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm/info.txt'];
 %parameters_info = sprintf(['Permutations for subject %d: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
 parameters_info = sprintf(['Permutations for subject %d: 6 through 10 CV splits, searchlight radius %d voxels, %s\n'], subject_num, vox_radius, subfolder);
 writelines(parameters_info, info_txt, WriteMode="append");
 
-addpath(genpath('/N/slate/brainevo/Implicit_Learning/tdt_3.999I/decoding_toolbox'));
-addpath(genpath('/N/slate/brainevo/Implicit_Learning/spm12'));
+if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
+    addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
+else
+    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
+end
+if exist([base_folder '/spm12']) == 7
+    addpath(genpath([base_folder '/spm12']));
+else
+    addpath(genpath('/Users/lab/Downloads/spm12'))
+end
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
@@ -50,9 +67,9 @@ cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scal
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 
 % Set beta_loc and mask
-beta_loc = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder];
+beta_loc = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder];
 regressor_names = design_from_spm(beta_loc);
-cfg.files.mask = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/mask.nii'];
+cfg.files.mask = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/mask.nii'];
 
 % Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
 cfg = decoding_describe_data(cfg,labelnames_arr,labels_arr,regressor_names,beta_loc);
@@ -89,7 +106,7 @@ cfg.design.function.name = 'make_design_cv';
 %%%% Find minimum permutation number with less than 10 files (assuming all of these only 5 have been done, so do 6-10)
 just_five_perms = [];
 for i = 1:500
-    contents = dir(['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i, '%03d')]);
+    contents = dir([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i, '%03d')]);
     if numel(contents) < 10
         just_five_perms = [just_five_perms, i];
     end
@@ -116,15 +133,15 @@ parfor i_perm = 1:num_permutations
     stream.Substream = i_perm;
 
     perm_num = i_perm + start_perm - 1;
-    %perm_results_dir = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i_perm, '%.3d')];
-    perm_results_dir = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
+    %perm_results_dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i_perm, '%.3d')];
+    perm_results_dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
 
     if ~isfolder(perm_results_dir)
         mkdir(perm_results_dir)
     end
     dispv(1, 'Permutation %i/%i', perm_num, num_permutations)
 
-    A = load(['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d') '/results_rep01/res_cfg.mat']);
+    A = load([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d') '/results_rep01/res_cfg.mat']);
     % use results_rep01 but could use any results_repXX since the labels should be the same for all of them
     cfg_copy = cfg;
     %cfg_copy.design.label = perm_designs{i_perm}.label; % get permuted labels from perm_designs
