@@ -1,10 +1,11 @@
-function [] = gng_decoding_allparams_real_labels(subject_num, num_cv_splits, subfolder)
+function [] = gng_decoding_allparams_real_labels(subject_num, num_cv_splits, subfolder, results_dir)
 
 % Formally called this "initial CV splits", decoding for real-labelled data
 
 % subject_num: Subject number of subject, will be converted to string
 % num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
+% results_dir: Folder under "subfolder" to save results in ("TDT_results" or "TDT_results_rad3")
 tStart = tic;
 
 % from decoding_template_grammatical_ungrammatical, from decoding_template_Haxby
@@ -62,7 +63,7 @@ for i = 1:56
 end
 
 myCluster = parcluster('local');
-parpool(myCluster.NumWorkers);
+parpool(myCluster.NumWorkers); % On habilis should be "6" could be much more on HPC but certainly don't need more than 6 for real-labelled decoding
 
 sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
 
@@ -78,13 +79,13 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
 
     % Set the analysis that should be performed (default is 'searchlight')
     cfg.analysis = 'searchlight'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
-    cfg.searchlight.radius = 5; % use searchlight of radius 3 (by default in voxels), see more details below % use 5
+    cfg.searchlight.radius = 3; % use searchlight of radius 3 (by default in voxels), see more details below
     cfg.searchlight.spherical = 1;
     cfg.scale.method = 'min0max1';
     cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
     cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
     % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
-    cfg.results.dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/TDT_results/TDT_results_rep' num2str(spl, '%.2d')];
+    cfg.results.dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir '/TDT_results_rep' num2str(spl, '%.2d')];
     if ~isfolder(cfg.results.dir)
         mkdir(cfg.results.dir)
     end
