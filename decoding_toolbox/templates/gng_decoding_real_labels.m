@@ -1,4 +1,4 @@
-function [] = gng_decoding_allparams_real_labels(subject_num, num_cv_splits, subfolder, results_dir)
+function [] = gng_decoding_real_labels(subject_num, num_cv_splits, subfolder, results_dir)
 
 % Formally called this "initial CV splits", decoding for real-labelled data
 

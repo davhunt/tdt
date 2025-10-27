@@ -1,15 +1,12 @@
-function [] = gng_decoding_allparams(subject_num, num_permutations, num_cv_splits, subfolder)
-
-% subject_num: Subject number of subject, will be converted to string
-% num_permutations: Number of permutations to do, each permutation will have the same random shuffling of labels (but maybe different assignments of data to folds)
-% num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
-% subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
+function [] = gng_decoding_permutations_sixtoten(subject_num, num_permutations, num_cv_splits, subfolder)
 
 tStart = tic;
+% Script for filling in CVs 6 through 10 when the first 5 have been computed
+% Load label permutations from the res_cfg.mat file from one of the first 5 CVs and use these labels for 6 - 10
 
 % set global parameters
-subject_num = num2str(subject_num, '%03d');
 vox_radius = 3;
+%subfolder = 'durations_unsmoothed_native';
 %subfolder = 'breakpoint_rts_unsmoothed_native';
 num_workers = 34; % could pass this in to function?
 
@@ -22,26 +19,24 @@ else
 end
 
 % create perm dir, write to log
-if ~isfolder([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'])
-    mkdir([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm']);
+if ~isfolder([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm'])
+    mkdir([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm']);
 end
-info_txt = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/info.txt'];
-parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
+info_txt = [base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm/info.txt'];
+%parameters_info = sprintf(['Permutations for subject %d: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
+parameters_info = sprintf(['Permutations for subject %d: 6 through 10 CV splits, searchlight radius %d voxels, %s\n'], subject_num, vox_radius, subfolder);
 writelines(parameters_info, info_txt, WriteMode="append");
 
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
 else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
+    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
 end
 if exist([base_folder '/spm12']) == 7
     addpath(genpath([base_folder '/spm12']));
 else
-    addpath(genpath('/Users/lab/Downloads/spm12'))
+    addpath(genpath('/Users/lab/Downloads/spm12'));
 end
-% Or on habilis...
-%addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-%addpath(genpath('/Users/lab/Downloads/spm12'));
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
@@ -74,10 +69,9 @@ cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scal
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 
 % Set beta_loc and mask
-beta_loc = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder];
+beta_loc = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder];
 regressor_names = design_from_spm(beta_loc);
-cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
-%cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_ants.nii']; % ANTs gray matter mask from antsBrainExtraction.sh
+cfg.files.mask = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/mask.nii'];
 
 % Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
 cfg = decoding_describe_data(cfg,labelnames_arr,labels_arr,regressor_names,beta_loc);
@@ -86,34 +80,53 @@ rng('shuffle') % make sure randsample in generating the design below is truly ra
 cfg.design = make_design_custom_GNG(cfg, 0); % need to seed RNG in function % not permuted labels yet
 cfg.files.chunk = cfg.design.chunk; cfg.design = rmfield(cfg.design, 'chunk');
 cfg.design.function.name = 'make_design_cv';
-perm_designs = make_design_permutation(cfg,num_permutations,0);
+%perm_designs = make_design_permutation(cfg,num_permutations,0);
 % Only want permuted labels from permuted designs, not train or test, will replace those later
+
+
+% See how many permutations have already written been written, continue from there (i.e. if there are 100 already start from 101)
+% rx = '^perm([0-9]+)$';
+% perm_folder = ['/N/slate/brainevo/Implicit_Learning/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm'];
+% file_list = dir(perm_folder);
+% perms_done = {};
+% for i = 1:length(file_list)
+%     %if ~isempty(regexp(file_list(i).name, rx, 'once'))
+%     tokens = regexp(file_list(i).name, rx, 'tokens');
+%     if ~isempty(tokens)
+%         perms_done{end+1} = tokens{1}{1};
+%     else
+%         start_perm = 1;
+%     end
+% end
+% if size(perms_done, 2) > 0
+%     perms_done = str2double(perms_done);
+%     start_perm = max(perms_done) + 1;
+% end
+% log_info = sprintf(['%s Proceeding with permutations, starting with %d and ending with %d\n'], datetime, start_perm, start_perm+num_permutations-1);
+% writelines(log_info, info_txt, WriteMode="append");
+
+%%%% Find minimum permutation number with less than 10 files (assuming all of these only 5 have been done, so do 6-10)
+just_five_perms = [];
+for i = 1:500
+    contents = dir([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i, '%03d')]);
+    if numel(contents) < 10
+        just_five_perms = [just_five_perms, i];
+    end
+end
+start_perm = min(just_five_perms);
+%%%%
+
+
+
+
+
+
+
+
 
 myCluster = parcluster('local');
 parpool(num_workers);
 sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
-
-% See how many permutations have already written been written, continue from there (i.e. if there are 100 already start from 101)
-% This is so we can do them 100 at a time which is more manageable than 500 at once, if we ultimately want 500.
-rx = '^perm([0-9]+)$';
-perm_folder = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'];
-file_list = dir(perm_folder);
-perms_done = {};
-for i = 1:length(file_list)
-    %if ~isempty(regexp(file_list(i).name, rx, 'once'))
-    tokens = regexp(file_list(i).name, rx, 'tokens');
-    if ~isempty(tokens)
-        perms_done{end+1} = tokens{1}{1};
-    else
-        start_perm = 1;
-    end
-end
-if size(perms_done, 2) > 0
-    perms_done = str2double(perms_done);
-    start_perm = max(perms_done) + 1;
-end
-log_info = sprintf(['%s Proceeding with permutations, starting with %d and ending with %d\n'], datetime, start_perm, start_perm+num_permutations-1);
-writelines(log_info, info_txt, WriteMode="append");
 
 %parfor i_perm = start_perm:start_perm+num_permutations-1
 parfor i_perm = 1:num_permutations
@@ -122,17 +135,22 @@ parfor i_perm = 1:num_permutations
     stream.Substream = i_perm;
 
     perm_num = i_perm + start_perm - 1;
-    perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
+    %perm_results_dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(i_perm, '%.3d')];
+    perm_results_dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
 
     if ~isfolder(perm_results_dir)
         mkdir(perm_results_dir)
     end
     dispv(1, 'Permutation %i/%i', perm_num, num_permutations)
 
+    A = load([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d') '/results_rep01/res_cfg.mat']);
+    % use results_rep01 but could use any results_repXX since the labels should be the same for all of them
     cfg_copy = cfg;
-    cfg_copy.design.label = perm_designs{i_perm}.label; % get permuted labels from perm_designs
+    %cfg_copy.design.label = perm_designs{i_perm}.label; % get permuted labels from perm_designs
+    cfg_copy.design.label = A.cfg.design.label; % get permuted labels from res_cfg.mat
 
-    for spl = 1:num_cv_splits
+    %for spl = 1:num_cv_splits
+    for spl = 6:10
 
         spl_design = make_design_custom_GNG(cfg_copy, 1, stream); % need to seed RNG in function
 
@@ -143,8 +161,6 @@ parfor i_perm = 1:num_permutations
         cfg_copy.design = spl_design; % get train and test sets from make_design_custom_GNG, generate new ones each split
 
         results = decoding(cfg_copy);
-        gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
-        delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
     end
 end
 
