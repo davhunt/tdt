@@ -29,8 +29,16 @@ info_txt = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder 
 parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
 writelines(parameters_info, info_txt, WriteMode="append");
 
-addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
-addpath(genpath([base_folder '/spm12']));
+if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
+    addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
+else
+    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
+end
+if exist([base_folder '/spm12']) == 7
+    addpath(genpath([base_folder '/spm12']));
+else
+    addpath(genpath('/Users/lab/Downloads/spm12'))
+end
 % Or on habilis...
 %addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
 %addpath(genpath('/Users/lab/Downloads/spm12'));
