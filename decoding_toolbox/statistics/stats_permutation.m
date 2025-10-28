@@ -1,3 +1,5 @@
+%%%%%%%%%%%% Modified by David for use with our Brainevo lab grammatical/ungrammatical data
+%%%%%%%%%%%% save outputs to .nii files
 % function p = stats_permutation(n_correct,reference,tail)
 % 
 % Function to calculate p-value for a permutation test.

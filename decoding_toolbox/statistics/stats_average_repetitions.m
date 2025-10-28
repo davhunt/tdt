@@ -1,5 +1,7 @@
 function [] = stats_average_repetitions(reps_folder, type)
 
+% Function to average all the CV splits seen in a folder ("TDT_results") or nested set of folders (each permutation folder within an overall "perm" folder)
+
 % reps_folder should be the folder that contains the "permXXX" folders, in the case of average repetitions for each permutation, or
 % the folder "TDT_results" that contains the "TDT_results_repXX" folders
 % type can be "real" (real data, just one directory) or "perm" (permuted data, many directories)
