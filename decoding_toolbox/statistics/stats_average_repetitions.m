@@ -25,7 +25,7 @@ if strcmp(type,'real')
     n = 0; % total number of niftis/CV reps
     for i = 1:length(all_dirs)
         if regexp(all_dirs(i).name, '^TDT_results_rep[0-9]+$')
-            nif = load_untouch_nii([reps_folder '/' all_dirs(i).name '/res_accuracy_minus_chance.nii']);
+            nif = load_untouch_nii([reps_folder '/' all_dirs(i).name '/res_accuracy_minus_chance.nii.gz']);
             if firstFlag
                 sz = size(nif.img);
                 firstFlag = 0;
@@ -40,7 +40,7 @@ if strcmp(type,'real')
 
     nif.img = sum_all_niis;
 
-    save_untouch_nii(nif, [reps_folder '/TDT_results_avg_allreps/res_accuracy_minus_chance.nii']);
+    save_untouch_nii(nif, [reps_folder '/TDT_results_avg_allreps/res_accuracy_minus_chance.nii.gz']);
 
 elseif strcmp(type,'perm')
     all_dirs = dir(reps_folder);
@@ -63,7 +63,7 @@ elseif strcmp(type,'perm')
         all_reps = dir([reps_folder '/perm' num2str(i, '%03d')]);
         for j = 1:length(all_reps)
             if regexp(all_reps(j).name, '^results_rep[0-9]+.*$')
-                nif = load_untouch_nii([reps_folder '/perm' num2str(i, '%03d') '/' all_reps(j).name '/res_accuracy_minus_chance.nii']);
+                nif = load_untouch_nii([reps_folder '/perm' num2str(i, '%03d') '/' all_reps(j).name '/res_accuracy_minus_chance.nii.gz']);
                 if firstFlag
                     sz = size(nif.img);
                     firstFlag = 0;
@@ -77,7 +77,7 @@ elseif strcmp(type,'perm')
 
         nif.img = sum_all_niis;
 
-        save_untouch_nii(nif, [reps_folder '/perm' num2str(i, '%03d') '/results_avg_allreps/res_accuracy_minus_chance.nii']);
+        save_untouch_nii(nif, [reps_folder '/perm' num2str(i, '%03d') '/results_avg_allreps/res_accuracy_minus_chance.nii.gz']);
 
     end
 
