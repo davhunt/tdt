@@ -161,6 +161,8 @@ parfor i_perm = 1:num_permutations
         cfg_copy.design = spl_design; % get train and test sets from make_design_custom_GNG, generate new ones each split
 
         results = decoding(cfg_copy);
+        gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+        delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
     end
 end
 
