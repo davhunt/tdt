@@ -121,4 +121,4 @@ end
 p_vals_img = reshape(p, orig_sz);
 out_nii = avgs_nii;
 out_nii.img = p_vals_img;
-save_untouch_nii(out_nii, [results_folder '/pvals_map_post_permutation.nii']);
+save_untouch_nii(out_nii, [results_folder '/pvals_map_post_permutation.nii.gz']);
