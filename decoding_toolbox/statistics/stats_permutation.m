@@ -44,7 +44,7 @@ function p = stats_permutation(results_folder, perms_folder, nreps, nperms, tail
 
 addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
 
-avgs_nii = load_untouch_nii([results_folder '/TDT_results_avg_allreps/res_accuracy_minus_chance.nii']); % from stats_average_repetitions
+avgs_nii = load_untouch_nii([results_folder '/TDT_results_avg_allreps/res_accuracy_minus_chance.nii.gz']); % from stats_average_repetitions
 orig_sz = size(avgs_nii.img);
 n_correct = avgs_nii.img(:);
 
@@ -53,7 +53,7 @@ reference = zeros(n, nperms);
 for i = 1:nperms
     p_avg = zeros(n, 1);
     for j = 1:nreps
-        nif = load_untouch_nii([perms_folder '/perm' sprintf('%.3d',i) '/results_rep' sprintf('%.2d',j) '/res_accuracy_minus_chance.nii']);
+        nif = load_untouch_nii([perms_folder '/perm' sprintf('%.3d',i) '/results_rep' sprintf('%.2d',j) '/res_accuracy_minus_chance.nii.gz']);
         p_avg(:) = p_avg(:) + nif.img(:);
     end
     p_avg = p_avg / nreps;
