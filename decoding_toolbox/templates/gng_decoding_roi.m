@@ -1,6 +1,6 @@
 function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, subfolder,roi_file)
 
-% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
+%% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
 % subject_num: Subject number of subject, will be converted to string
 % num_permutations: Number of permutations to do, each permutation will have the same random shuffling of labels (but maybe different assignments of data to folds)
