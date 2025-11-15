@@ -162,6 +162,8 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     %cfg.verbose = 0;
     % Run decoding
     results = decoding(cfg);
+    gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
 end
 delete(gcp('nocreate'))
 
