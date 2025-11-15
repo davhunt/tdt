@@ -18,15 +18,6 @@ else
     error('Can''t find base folder, are we on habilis or the HPC?');
 end
 
-% create perm dir, write to log
-if ~isfolder([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm'])
-    mkdir([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm']);
-end
-info_txt = [base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm/info.txt'];
-%parameters_info = sprintf(['Permutations for subject %d: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
-parameters_info = sprintf(['Permutations for subject %d: 6 through 10 CV splits, searchlight radius %d voxels, %s\n'], subject_num, vox_radius, subfolder);
-writelines(parameters_info, info_txt, WriteMode="append");
-
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
 else
@@ -37,6 +28,19 @@ if exist([base_folder '/spm12']) == 7
 else
     addpath(genpath('/Users/lab/Downloads/spm12'));
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+base_folder = ['/N/project/brainevo']; % overwrite base_folder to write in /N/project/brainevo so we have enough space
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% create perm dir, write to log
+if ~isfolder([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm'])
+    mkdir([base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm']);
+end
+info_txt = [base_folder '/Complex_seq_analysis/0' num2str(subject_num, '%02d') '/MVPA/' subfolder '/perm/info.txt'];
+%parameters_info = sprintf(['Permutations for subject %d: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
+parameters_info = sprintf(['Permutations for subject %d: 6 through 10 CV splits, searchlight radius %d voxels, %s\n'], subject_num, vox_radius, subfolder);
+writelines(parameters_info, info_txt, WriteMode="append");
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
