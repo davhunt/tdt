@@ -40,6 +40,10 @@ else
     addpath(genpath('/Users/lab/Downloads/spm12'))
 end
 
+%%%%%%%%%% temporarily change base folder to /N/project/brainevo ....
+base_folder = ['/N/project/brainevo'];
+%%%%%%%%%%
+
 % Set the label names to the regressor names which you want to use for 
 % decoding, e.g. 'button left' and 'button right'
 % don't remember the names? -> run display_regressor_names(beta_loc)
@@ -60,6 +64,10 @@ labels_arr = zeros(1,56); labels_arr(1:14) = labelvalue1; labels_arr(15:28) = la
 labelnames_arr = {};
 for i = 1:56
     labelnames_arr{i} = eval(['labelname' num2str(i)]);
+end
+
+if ~isfolder([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir])
+    mkdir([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir]);
 end
 
 myCluster = parcluster('local');
@@ -162,8 +170,8 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     %cfg.verbose = 0;
     % Run decoding
     results = decoding(cfg);
-    gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
-    delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 end
 delete(gcp('nocreate'))
 
