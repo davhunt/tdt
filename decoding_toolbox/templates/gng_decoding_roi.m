@@ -1,4 +1,4 @@
-function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, subfolder, roi_file)
+function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, subfolder, roi_file, outdir)
 
 %% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
@@ -7,6 +7,7 @@ function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, sub
 % num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
 % roi_file: ROI mask file (.nii)
+% outdir: Directory under "subfolder" to save results in
 
 tStart = tic;
 
@@ -14,7 +15,7 @@ tStart = tic;
 subject_num = num2str(subject_num, '%03d');
 vox_radius = 3;
 %subfolder = 'breakpoint_rts_unsmoothed_native';
-num_workers = 34; % could pass this in to function?
+%num_workers = 34; % could pass this in to function?
 
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
     base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
@@ -65,20 +66,12 @@ for i = 1:56
     labelnames_arr{i} = eval(['labelname' num2str(i)]);
 end
 
-% Initialize cfg struct and fill in decoding parameters
-cfg = decoding_defaults;
-cfg.plot_design = 0; % no plot with parfor
-cfg.verbose = 0;
-cfg.analysis = 'ROI'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
-cfg.searchlight.radius = vox_radius;
-cfg.searchlight.spherical = 1;
-cfg.scale.method = 'min0max1';
-cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
-cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
+results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/TDT_results'];
+if ~isfolder(results_dir)
+    mkdir(results_dir);
+end
 
-% Set beta_loc and mask
-beta_loc = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder];
-regressor_names = design_from_spm(beta_loc);
+% Intersect ROI w/ mask
 wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
 wholebrain_mask = load_untouch_nii(wholebrain_mask)
 roi_file_nii = load_untouch_nii(roi_file);
@@ -86,83 +79,64 @@ wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii
 roi_file_nii.img = wholebrain_mask_roi_intersect;
 wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask.nii.gz']; % can overwrite this
 save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
-cfg.files.mask = wholebrain_mask_roi_intersect_out;
-%cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
-%cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_ants.nii']; % ANTs gray matter mask from antsBrainExtraction.sh
 
-% Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
-cfg = decoding_describe_data(cfg,labelnames_arr,labels_arr,regressor_names,beta_loc);
+myCluster = parcluster('local');
+parpool(myCluster.NumWorkers); % On habilis should be "6" could be much more on HPC but certainly don't need more than 6 for real-labelled decoding
+sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
 
-rng('shuffle') % make sure randsample in generating the design below is truly random
-cfg.design = make_design_custom_GNG(cfg, 0); % need to seed RNG in function % not permuted labels yet
-cfg.files.chunk = cfg.design.chunk; cfg.design = rmfield(cfg.design, 'chunk');
-cfg.design.function.name = 'make_design_cv';
+parfor spl = 1:num_cv_splits
+    % set up RNG seed
+    stream = sc.Value;
+    stream.Substream = spl;
+
+    % Initialize cfg struct and fill in decoding parameters
+    cfg = decoding_defaults;
+    cfg.plot_design = 0; % no plot with parfor
+    cfg.verbose = 0;
+    cfg.analysis = 'ROI'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
+    cfg.searchlight.radius = vox_radius;
+    cfg.searchlight.spherical = 1;
+    cfg.scale.method = 'min0max1';
+    cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
+    cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
+    % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
+    cfg.results.dir = [results_dir '/TDT_results_rep' num2str(spl, '%.2d')];
+    if ~isfolder(cfg.results.dir)
+        mkdir(cfg.results.dir);
+    end
+
+    % Set beta_loc and mask
+    beta_loc = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder];
+    regressor_names = design_from_spm(beta_loc);
+    cfg.files.mask = wholebrain_mask_roi_intersect_out;
+    %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+    %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_ants.nii']; % ANTs gray matter mask from antsBrainExtraction.sh
+
+    % Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
+    cfg = decoding_describe_data(cfg,labelnames_arr,labels_arr,regressor_names,beta_loc);
+
+    %rng('shuffle') % make sure randsample in generating the design below is truly random
+    cfg.design = make_design_custom_GNG(cfg, 0, stream); % need to seed RNG in function % not permuted labels yet
+    cfg.files.chunk = cfg.design.chunk;
+    cfg.design = rmfield(cfg.design, 'chunk');
+    %cfg.design.function.name = 'make_design_cv'; % ?
+    results = decoding(cfg);
+    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']); % really just one value in whole image
+    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+end
+
+delete(gcp('nocreate'))
+
+tEnd = toc(tStart);
+disp(['Running ' num2str(num_cv_splits) ' CV splits on subject ' num2str(subject_num) ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
+
+
+
 perm_designs = make_design_permutation(cfg,num_permutations,0);
 % Only want permuted labels from permuted designs, not train or test, will replace those later
 
-myCluster = parcluster('local');
-parpool(num_workers);
-sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
 
-% See how many permutations have already written been written, continue from there (i.e. if there are 100 already start from 101)
-% This is so we can do them 100 at a time which is more manageable than 500 at once, if we ultimately want 500.
-rx = '^perm([0-9]+)$';
-perm_folder = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'];
-file_list = dir(perm_folder);
-perms_done = {};
-for i = 1:length(file_list)
-    %if ~isempty(regexp(file_list(i).name, rx, 'once'))
-    tokens = regexp(file_list(i).name, rx, 'tokens');
-    if ~isempty(tokens)
-        perms_done{end+1} = tokens{1}{1};
-    else
-        start_perm = 1;
-    end
-end
-if size(perms_done, 2) > 0
-    perms_done = str2double(perms_done);
-    start_perm = max(perms_done) + 1;
-end
-log_info = sprintf(['%s Proceeding with permutations, starting with %d and ending with %d\n'], datetime, start_perm, start_perm+num_permutations-1);
-writelines(log_info, info_txt, WriteMode="append");
 
-%parfor i_perm = start_perm:start_perm+num_permutations-1
-parfor i_perm = 1:num_permutations
 
-    stream = sc.Value;
-    stream.Substream = i_perm;
-
-    perm_num = i_perm + start_perm - 1;
-    perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
-
-    if ~isfolder(perm_results_dir)
-        mkdir(perm_results_dir)
-    end
-    dispv(1, 'Permutation %i/%i', perm_num, num_permutations)
-
-    cfg_copy = cfg;
-    cfg_copy.design.label = perm_designs{i_perm}.label; % get permuted labels from perm_designs
-
-    for spl = 1:num_cv_splits
-
-        spl_design = make_design_custom_GNG(cfg_copy, 1, stream); % need to seed RNG in function
-
-        cfg_copy.results.dir = [perm_results_dir '/results_rep' num2str(spl, '%.2d')];
-        if ~isfolder(cfg_copy.results.dir)
-            mkdir(cfg_copy.results.dir)
-        end
-        cfg_copy.design = spl_design; % get train and test sets from make_design_custom_GNG, generate new ones each split
-
-        results = decoding(cfg_copy);
-        gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
-        delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
-    end
-end
-
-delete(gcp('nocreate'));
-
-tEnd = toc(tStart);
-log_info = sprintf(['%s Done with %d permutations\n'], datetime, num_permutations);
-writelines(log_info, info_txt, WriteMode="append");
 
 end

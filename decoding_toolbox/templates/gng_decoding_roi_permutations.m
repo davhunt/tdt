@@ -1,4 +1,4 @@
-function [] = gng_decoding_roi_permutations(subject_num, num_permutations, num_cv_splits, subfolder, roi_file)
+function [] = gng_decoding_roi_permutations(subject_num, num_permutations, num_cv_splits, subfolder, roi_file, outdir)
 
 %% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
@@ -7,6 +7,7 @@ function [] = gng_decoding_roi_permutations(subject_num, num_permutations, num_c
 % num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
 % roi_file: ROI mask file (.nii)
+% outdir: Directory under "subfolder" to save results in
 
 tStart = tic;
 
