@@ -1,4 +1,4 @@
-function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, subfolder, roi_file)
+function [] = gng_decoding_roi_permutations(subject_num, num_permutations, num_cv_splits, subfolder, roi_file)
 
 %% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
@@ -70,8 +70,8 @@ cfg = decoding_defaults;
 cfg.plot_design = 0; % no plot with parfor
 cfg.verbose = 0;
 cfg.analysis = 'ROI'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
-cfg.searchlight.radius = vox_radius;
-cfg.searchlight.spherical = 1;
+%cfg.searchlight.radius = vox_radius;
+%cfg.searchlight.spherical = 1;
 cfg.scale.method = 'min0max1';
 cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
@@ -84,7 +84,7 @@ wholebrain_mask = load_untouch_nii(wholebrain_mask)
 roi_file_nii = load_untouch_nii(roi_file);
 wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii.img);
 roi_file_nii.img = wholebrain_mask_roi_intersect;
-wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask.nii.gz']; % can overwrite this
+wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask.nii.gz'];  % can overwrite this
 save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
 cfg.files.mask = wholebrain_mask_roi_intersect_out;
 %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];

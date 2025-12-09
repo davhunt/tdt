@@ -32,6 +32,7 @@ if exist([base_folder '/spm12']) == 7
 else
     addpath(genpath('/Users/lab/Downloads/spm12'))
 end
+
 % Or on habilis...
 %addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
 %addpath(genpath('/Users/lab/Downloads/spm12'));
