@@ -1,4 +1,4 @@
-function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, subfolder, roi_file, outdir)
+function [] = gng_decoding_roi(subject_num, num_cv_splits, subfolder, roi_file, results_dir)
 
 %% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
@@ -7,7 +7,7 @@ function [] = gng_decoding_roi(subject_num, num_permutations, num_cv_splits, sub
 % num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
 % roi_file: ROI mask file (.nii)
-% outdir: Directory under "subfolder" to save results in
+% results_dir: Directory under "subfolder" to save results in (i.e. "BA44+45/TDT_results")
 
 tStart = tic;
 
@@ -28,20 +28,12 @@ end
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
     addpath(genpath([base_folder '/spm12']));
-    addpath(genpath([base_folder '/matlab_nifti_tools'));
+    addpath(genpath([base_folder '/matlab_nifti_tools']));
 else
     addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
     addpath(genpath('/Users/lab/Downloads/spm12'));
     addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
 end
-
-% create perm dir, write to log
-if ~isfolder([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'])
-    mkdir([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm']);
-end
-info_txt = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/info.txt'];
-parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
-writelines(parameters_info, info_txt, WriteMode="append");
 
 % Or on habilis...
 %addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
@@ -66,19 +58,20 @@ for i = 1:56
     labelnames_arr{i} = eval(['labelname' num2str(i)]);
 end
 
-results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/TDT_results'];
+results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' results_dir];
 if ~isfolder(results_dir)
     mkdir(results_dir);
 end
 
 % Intersect ROI w/ mask
 wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
-wholebrain_mask = load_untouch_nii(wholebrain_mask)
+wholebrain_mask = load_untouch_nii(wholebrain_mask);
 roi_file_nii = load_untouch_nii(roi_file);
 wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii.img);
 roi_file_nii.img = wholebrain_mask_roi_intersect;
-wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask.nii.gz']; % can overwrite this
+wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask_tmp.nii']; % can overwrite this
 save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
+%cfg.files.mask = wholebrain_mask_roi_intersect_out;
 
 myCluster = parcluster('local');
 parpool(myCluster.NumWorkers); % On habilis should be "6" could be much more on HPC but certainly don't need more than 6 for real-labelled decoding
@@ -121,8 +114,11 @@ parfor spl = 1:num_cv_splits
     cfg.design = rmfield(cfg.design, 'chunk');
     %cfg.design.function.name = 'make_design_cv'; % ?
     results = decoding(cfg);
-    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']); % really just one value in whole image
-    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    %movefile([cfg_copy.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii'], ...
+    %  [cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+    %gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']); % really just one value in whole image
+    %delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii']);
 end
 
 delete(gcp('nocreate'))
@@ -131,9 +127,6 @@ tEnd = toc(tStart);
 disp(['Running ' num2str(num_cv_splits) ' CV splits on subject ' num2str(subject_num) ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
 
 
-
-perm_designs = make_design_permutation(cfg,num_permutations,0);
-% Only want permuted labels from permuted designs, not train or test, will replace those later
 
 
 
