@@ -182,7 +182,8 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
 
     % now, need to write out just H decoding accuracy map, just L, and H - L
     %template_nii = load_untouch_nii([cfg.results.dir '/res_accuracy_minus_chance.nii'])
-    template_nii = load_untouch_nii(cfg.files.mask); % use mask
+    mask_nii = load_untouch_nii(cfg.files.mask); % use mask
+    template_nii = load_untouch_nii([cfg.results.dir '/res_accuracy_minus_chance.nii']);
     nVoxels = size(results.accuracy_minus_chance.output,1); % # voxels in mask
 
     hmap = zeros(nVoxels,1);
@@ -201,7 +202,7 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     for k = 1:nZ
         for j = 1:nY
             for i = 1:nX
-                if template_nii.img(i,j,k) == 1 % template is the mask
+                if mask_nii.img(i,j,k) == 1
                     hmap_img(i,j,k) = hmap(n);
                     lmap_img(i,j,k) = lmap(n);
                     diffmap_img(i,j,k) = diffmap(n);
@@ -218,6 +219,11 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     template_nii.img = diffmap_img;
     save_untouch_nii(template_nii, [cfg.results.dir '/res_accuracy_minus_chance_H-L.nii']);
 
+    % gzip for storage space reasons
+    for fsuf = ["","_H","_L","_H-L"]
+        gzip([cfg.results.dir '/res_accuracy_minus_chance' char(fsuf) '.nii'])
+        delete([cfg.results.dir '/res_accuracy_minus_chance' char(fsuf) '.nii'])
+    end
     %gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
     %delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 end
