@@ -41,7 +41,7 @@ else
 end
 
 %%%%%%%%%% temporarily change base folder to /N/project/brainevo ....
-base_folder = ['/N/project/brainevo'];
+%base_folder = ['/N/project/brainevo'];
 %%%%%%%%%%
 
 % Set the label names to the regressor names which you want to use for 
