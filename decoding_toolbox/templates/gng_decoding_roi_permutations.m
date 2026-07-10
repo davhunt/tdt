@@ -1,10 +1,13 @@
-function [] = gng_decoding_permutations(subject_num, num_permutations, num_cv_splits, subfolder)
+function [] = gng_decoding_roi_permutations(subject_num, num_permutations, num_cv_splits, subfolder, roi_file, outdir)
 
-% Script to run TDT's decoding on permuted-label data
+%% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
+
 % subject_num: Subject number of subject, will be converted to string
 % num_permutations: Number of permutations to do, each permutation will have the same random shuffling of labels (but maybe different assignments of data to folds)
 % num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
+% roi_file: ROI mask file (.nii)
+% outdir: Directory under "subfolder" to save results in
 
 tStart = tic;
 
@@ -12,7 +15,7 @@ tStart = tic;
 subject_num = num2str(subject_num, '%03d');
 vox_radius = 3;
 %subfolder = 'breakpoint_rts_unsmoothed_native';
-num_workers = 34; % could pass this in to function?
+%num_workers = 34; % could pass this in to function?
 
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
     base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
@@ -24,29 +27,25 @@ end
 
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
-else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
-end
-if exist([base_folder '/spm12']) == 7
     addpath(genpath([base_folder '/spm12']));
+    addpath(genpath([base_folder '/matlab_nifti_tools']));
 else
-    addpath(genpath('/Users/lab/Downloads/spm12'))
+    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
+    addpath(genpath('/Users/lab/Downloads/spm12'));
+    addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
 end
+
+% create perm dir, write to log
+if ~isfolder([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/perm'])
+    mkdir([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/perm']);
+end
+info_txt = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/perm/info.txt'];
+parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
+writelines(parameters_info, info_txt, WriteMode="append");
 
 % Or on habilis...
 %addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
 %addpath(genpath('/Users/lab/Downloads/spm12'));
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-base_folder = ['/N/project/brainevo']; % overwrite base_folder to write in /N/project/brainevo so we have enough space
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% create perm dir, write to log
-if ~isfolder([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'])
-    mkdir([base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm']);
-end
-info_txt = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/info.txt'];
-parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlight radius %d voxels, %s\n'], subject_num, num_cv_splits, vox_radius, subfolder);
-writelines(parameters_info, info_txt, WriteMode="append");
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
@@ -71,9 +70,9 @@ end
 cfg = decoding_defaults;
 cfg.plot_design = 0; % no plot with parfor
 cfg.verbose = 0;
-cfg.analysis = 'searchlight'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
-cfg.searchlight.radius = vox_radius;
-cfg.searchlight.spherical = 1;
+cfg.analysis = 'ROI'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
+%cfg.searchlight.radius = vox_radius;
+%cfg.searchlight.spherical = 1;
 cfg.scale.method = 'min0max1';
 cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
@@ -81,7 +80,15 @@ cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 % Set beta_loc and mask
 beta_loc = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder];
 regressor_names = design_from_spm(beta_loc);
-cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+wholebrain_mask = load_untouch_nii(wholebrain_mask);
+roi_file_nii = load_untouch_nii(roi_file);
+wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii.img);
+roi_file_nii.img = wholebrain_mask_roi_intersect;
+wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask_tmp.nii'];  % can overwrite this
+save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
+cfg.files.mask = wholebrain_mask_roi_intersect_out;
+%cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
 %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_ants.nii']; % ANTs gray matter mask from antsBrainExtraction.sh
 
 % Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
@@ -94,14 +101,11 @@ cfg.design.function.name = 'make_design_cv';
 perm_designs = make_design_permutation(cfg,num_permutations,0);
 % Only want permuted labels from permuted designs, not train or test, will replace those later
 
-myCluster = parcluster('local');
-parpool(num_workers);
-sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
 
 % See how many permutations have already written been written, continue from there (i.e. if there are 100 already start from 101)
 % This is so we can do them 100 at a time which is more manageable than 500 at once, if we ultimately want 500.
 rx = '^perm([0-9]+)$';
-perm_folder = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm'];
+perm_folder = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/perm'];
 file_list = dir(perm_folder);
 perms_done = {};
 for i = 1:length(file_list)
@@ -120,6 +124,11 @@ end
 log_info = sprintf(['%s Proceeding with permutations, starting with %d and ending with %d\n'], datetime, start_perm, start_perm+num_permutations-1);
 writelines(log_info, info_txt, WriteMode="append");
 
+myCluster = parcluster('local');
+%parpool(num_workers);
+parpool(myCluster.NumWorkers);
+sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
+
 %parfor i_perm = start_perm:start_perm+num_permutations-1
 parfor i_perm = 1:num_permutations
 
@@ -127,7 +136,7 @@ parfor i_perm = 1:num_permutations
     stream.Substream = i_perm;
 
     perm_num = i_perm + start_perm - 1;
-    perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
+    perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' outdir '/perm/perm' num2str(perm_num, '%.3d')];
 
     if ~isfolder(perm_results_dir)
         mkdir(perm_results_dir)
@@ -148,8 +157,11 @@ parfor i_perm = 1:num_permutations
         cfg_copy.design = spl_design; % get train and test sets from make_design_custom_GNG, generate new ones each split
 
         results = decoding(cfg_copy);
-        gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
-        delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+        %movefile([cfg_copy.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii'], ...
+        %  [cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+        %gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+        %delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+        delete([cfg_copy.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii']);
     end
 end
 

@@ -40,9 +40,6 @@ else
     addpath(genpath('/Users/lab/Downloads/spm12'))
 end
 
-%%%%%%%%%% temporarily change base folder to /N/project/brainevo ....
-%base_folder = ['/N/project/brainevo'];
-%%%%%%%%%%
 
 % Set the label names to the regressor names which you want to use for 
 % decoding, e.g. 'button left' and 'button right'
@@ -66,9 +63,19 @@ for i = 1:56
     labelnames_arr{i} = eval(['labelname' num2str(i)]);
 end
 
-if ~isfolder([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir])
-    mkdir([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir]);
+% After getting results.predicted_labels.output the trials won't be in the same order as above
+true_labels_cv_order = [];
+for i = 1:14
+    true_labels_cv_order = [true_labels_cv_order; 1; 1; -1; -1];
 end
+%chunk_strength_mat = [ones(1,28) zeros(1,28)]; % binary mat for H = 1, L = 0 chunk strength, 14 HG, 14 HNG, 14 LG, 14 LNG
+
+
+% if ~isfolder([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir])
+%     mkdir([base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir]);
+% end
+
+
 
 myCluster = parcluster('local');
 parpool(myCluster.NumWorkers); % On habilis should be "6" could be much more on HPC but certainly don't need more than 6 for real-labelled decoding
@@ -91,9 +98,11 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     cfg.searchlight.spherical = 1;
     cfg.scale.method = 'min0max1';
     cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
-    cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
+    cfg.results.output = {'accuracy_minus_chance','confusion_matrix', 'predicted_labels'}; % add "predicted_labels"
+    %% other option includes "decision_values" for distance from hyperplane
     % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
-    cfg.results.dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir '/TDT_results_rep' num2str(spl, '%.2d')];
+    %cfg.results.dir = [base_folder '/Complex_seq_analysis/' num2str(subject_num, '%.3d') '/MVPA/' subfolder '/' results_dir '/TDT_results_rep' num2str(spl, '%.2d')];
+    cfg.results.dir = [base_folder '/Complex_seq_analysis/chunk_strength_analysis/' num2str(subject_num, '%.2d') '/TDT_results_rep' num2str(spl, '%.2d')];
     if ~isfolder(cfg.results.dir)
         mkdir(cfg.results.dir)
     end
@@ -170,8 +179,53 @@ parfor spl = 1:num_cv_splits % 10 CV splits reasonable?
     %cfg.verbose = 0;
     % Run decoding
     results = decoding(cfg);
-    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
-    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+
+    % now, need to write out just H decoding accuracy map, just L, and H - L
+    %template_nii = load_untouch_nii([cfg.results.dir '/res_accuracy_minus_chance.nii'])
+    mask_nii = load_untouch_nii(cfg.files.mask); % use mask
+    template_nii = load_untouch_nii([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    nVoxels = size(results.accuracy_minus_chance.output,1); % # voxels in mask
+
+    hmap = zeros(nVoxels,1);
+    lmap = zeros(nVoxels,1);
+    diffmap = zeros(nVoxels,1);
+    for i = 1:nVoxels
+        hmap(i) = sum(results.predicted_labels.output{i}(1:28) == true_labels_cv_order(1:28));
+        lmap(i) = sum(results.predicted_labels.output{i}(29:56) == true_labels_cv_order(29:56));
+        diffmap(i) = hmap(i) - lmap(i);
+    end
+    % then map voxel indices to voxels, unpack using cfg.files.mask
+    % indices in N x 1 results.accuracy_minus_chance.output are in order of Z first, then Y, then X
+    nZ = size(template_nii.img,3); nY = size(template_nii.img,2); nX = size(template_nii.img,1);
+    hmap_img = zeros(size(template_nii.img)); lmap_img = zeros(size(template_nii.img)); diffmap_img = zeros(size(template_nii.img));
+    n = 1;
+    for k = 1:nZ
+        for j = 1:nY
+            for i = 1:nX
+                if mask_nii.img(i,j,k) == 1
+                    hmap_img(i,j,k) = hmap(n);
+                    lmap_img(i,j,k) = lmap(n);
+                    diffmap_img(i,j,k) = diffmap(n);
+                    n = n+1;
+                end
+            end
+        end
+    end
+                
+    template_nii.img = hmap_img;
+    save_untouch_nii(template_nii, [cfg.results.dir '/res_accuracy_minus_chance_H.nii']);
+    template_nii.img = lmap_img;
+    save_untouch_nii(template_nii, [cfg.results.dir '/res_accuracy_minus_chance_L.nii']);
+    template_nii.img = diffmap_img;
+    save_untouch_nii(template_nii, [cfg.results.dir '/res_accuracy_minus_chance_H-L.nii']);
+
+    % gzip for storage space reasons
+    for fsuf = ["","_H","_L","_H-L"]
+        gzip([cfg.results.dir '/res_accuracy_minus_chance' char(fsuf) '.nii'])
+        delete([cfg.results.dir '/res_accuracy_minus_chance' char(fsuf) '.nii'])
+    end
+    %gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    %delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 end
 delete(gcp('nocreate'))
 
