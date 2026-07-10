@@ -50,7 +50,15 @@ elseif strcmp(type,'perm')
             n_perms = n_perms + 1;
         end
     end
+    %%%%%%%% 6-23-26 just do 1-500, 501-1000 later
+    %n_perms = 500;
+    n_perms = 1000;
+    %%%%%%%%
     for i = 1:n_perms
+        if exist([reps_folder '/perm' num2str(i, '%03d') '/results_avg_allreps/res_accuracy_minus_chance.nii.gz']) == 2
+            % if average map already generated, continue
+            continue
+        end
         if exist([reps_folder '/perm' num2str(i, '%03d')]) ~= 7
             fprintf(['Don''t see a folder ' reps_folder '/perm%03d, check your perm folder input\n'], i);
         end
