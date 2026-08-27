@@ -91,6 +91,7 @@ cfg.files.chunk = chunks;
 cfg.files.mask = ['/Users/lab/Downloads/ants_registrations/sentence_reading/' subjChar '/mask_epi.nii.gz'];
 
 %cfg.design = make_design_cv(cfg);
+cfg.design = make_design_cv(cfg);
 perm_designs = make_design_permutation(cfg,num_permutations);
 
 cfg.plot_design = 0; % no plot in parfor
@@ -104,14 +105,38 @@ cfg.scale.method = 'min0max1';
 cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
+
 %perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
+perm_results_dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm')));
+
+% Check on perms already done
+rx = '^perm([0-9]+)$';
+file_list = dir(perm_results_dir);
+perms_done = {};
+for i = 1:length(file_list)
+    %if ~isempty(regexp(file_list(i).name, rx, 'once'))
+    tokens = regexp(file_list(i).name, rx, 'tokens');
+    if ~isempty(tokens)
+        perms_done{end+1} = tokens{1}{1};
+    else
+        start_perm = 1;
+    end
+end
+if size(perms_done, 2) > 0
+    perms_done = str2double(perms_done);
+    start_perm = max(perms_done) + 1;
+end
+
 for perm_num=1:num_permutations
-    cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(perm_num, '%.3d')]));
+    %cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(perm_num, '%.3d')]));
+    %cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(start_perm+perm_num-1, '%.3d')]));
+    cfg.results.dir = char(fullfile(perm_results_dir,['perm' num2str(start_perm+perm_num-1, '%.3d')]));
     if ~isfolder(cfg.results.dir)
         mkdir(cfg.results.dir)
     end
     cfg.design = perm_designs{perm_num};
     cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one to number of contrasting trials in a block (12 vs 13)
+    cfg.files.label = cfg.design.label(:,1);
     results = decoding(cfg);
 end
 
