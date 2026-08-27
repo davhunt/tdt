@@ -1,12 +1,8 @@
-function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, window_type, contrast, results_dir)
+function [] = sentence_reading_decoding_permutations(subject_num, input_dir, window_type, contrast, num_permutations)
 
-% This function conducts a searchlight MVPA decoding analysis on the sentence reading task beta maps,
-% wherein a machine learning classifier is trained to distinguish, from a subject's BOLD activity patterns,
-% whether a given pattern corresponds to one trial type or another. The trial type contrast can be active vs. passive,
-% conjoined-active vs. object-relative, or grammatical vs. ungrammatical. The performance of the decoding classifier
-% for a given searchlight can then be used as a measure of how much information about the contrast is contained in
-% that searchlight's neural activity patterns across the experiment.
-
+% This function does a permutation analysis on the sentence reading data, generating decoding accuracy maps from 
+% betas with randomly permuted labels, to provide a null distribution of maps with which to compare the real-labelled
+% results.
 % Four runs/blocks of data were collected for this experiment, with trial types balanced across all blocks, and so a
 % leave-one-run-out (LORO) cross-validation is performed where a classifier is trained on three blocks, and tested on
 % held out block.
@@ -14,8 +10,8 @@ function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, wind
 % subject_num: Subject number of subject, will be converted to string
 % input_dir: Directory under which we can find subject folders
 % window_type: Directory under subject folders, what type of window was used to calculate betas
-% contrast: The contrast to run MVPA decoding analysis on, can be "AP," "CAOR," or "GUG"
-% results_dir: Directory under window_type to save results in (e.g. "TDT_results")
+% contrast: The contrast to run permutation analysis on, can be "AP," "CAOR," or "GUG"
+% num_permutations: Number of permutations to do, takes 5-20 minutes per permutation, ~5 for AP/CAOR and ~20 for GUG
 
 % Notes:
 % - For contrasts "AP" or "CAOR" only use grammatical trials, while "GUG" uses all trials
@@ -94,8 +90,8 @@ cfg.files.label = labels;
 cfg.files.chunk = chunks;
 cfg.files.mask = ['/Users/lab/Downloads/ants_registrations/sentence_reading/' subjChar '/mask_epi.nii.gz'];
 
-cfg.design = make_design_cv(cfg);
-cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one vs number of contrasting trials in a block (12 vs 13)
+%cfg.design = make_design_cv(cfg);
+perm_designs = make_design_permutation(cfg,num_permutations);
 
 cfg.plot_design = 0; % no plot in parfor
 cfg.verbose = 0;
@@ -108,12 +104,16 @@ cfg.scale.method = 'min0max1';
 cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
-cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,results_dir));
-if ~isfolder(cfg.results.dir)
-    mkdir(cfg.results.dir)
+%perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
+for perm_num=1:num_permutations
+    cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(perm_num, '%.3d')]));
+    if ~isfolder(cfg.results.dir)
+        mkdir(cfg.results.dir)
+    end
+    cfg.design = perm_designs{perm_num};
+    cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one to number of contrasting trials in a block (12 vs 13)
+    results = decoding(cfg);
 end
-
-results = decoding(cfg);
 
 tEnd = toc(tStart);
 disp(['Running LORO CV on subject ' subjChar ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
