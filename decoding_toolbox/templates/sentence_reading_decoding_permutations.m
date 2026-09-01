@@ -108,8 +108,15 @@ cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scal
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
 
+myCluster = parcluster('local');
+parpool(num_workers);
+sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
+
 %perm_results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/perm/perm' num2str(perm_num, '%.3d')];
 perm_results_dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm')));
+if ~isfolder(perm_results_dir)
+    mkdir(perm_results_dir)
+end
 
 % Check on perms already done
 rx = '^perm([0-9]+)$';
@@ -129,7 +136,7 @@ if size(perms_done, 2) > 0
     start_perm = max(perms_done) + 1;
 end
 
-for perm_num=1:num_permutations
+parfor perm_num=1:num_permutations
     cfg.results.dir = char(fullfile(perm_results_dir,['perm' num2str(start_perm+perm_num-1, '%.3d')]));
     if ~isfolder(cfg.results.dir)
         mkdir(cfg.results.dir)
@@ -141,6 +148,8 @@ for perm_num=1:num_permutations
     gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
     delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 end
+
+delete(gcp('nocreate'));
 
 tEnd = toc(tStart);
 disp(['Running LORO CV on subject ' subjChar ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
