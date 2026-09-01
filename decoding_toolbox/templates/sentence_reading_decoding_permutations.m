@@ -1,4 +1,4 @@
-function [] = sentence_reading_decoding_permutations(subject_num, input_dir, window_type, contrast, num_permutations)
+function [] = sentence_reading_decoding_permutations(subject_num, input_dir, spreadsheetFile, window_type, contrast, num_permutations)
 
 % This function does a permutation analysis on the sentence reading data, generating decoding accuracy maps from 
 % betas with randomly permuted labels, to provide a null distribution of maps with which to compare the real-labelled
@@ -9,6 +9,7 @@ function [] = sentence_reading_decoding_permutations(subject_num, input_dir, win
 
 % subject_num: Subject number of subject, will be converted to string
 % input_dir: Directory under which we can find subject folders
+% spreadsheetFile: Excel spreadsheet with subject trial data (onsets + durations)
 % window_type: Directory under subject folders, what type of window was used to calculate betas
 % contrast: The contrast to run permutation analysis on, can be "AP," "CAOR," or "GUG"
 % num_permutations: Number of permutations to do, takes 5-20 minutes per permutation, ~5 for AP/CAOR and ~20 for GUG
@@ -21,9 +22,11 @@ function [] = sentence_reading_decoding_permutations(subject_num, input_dir, win
 tStart = tic;
 
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
-    base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
+    base_folder = '/N/slate/brainevo/Implicit_Learning'; % If on slate
+    ants_registrations_dir = '/N/slate/brainevo/Implicit_Learning/ants_registrations';
 elseif exist('/Volumes/data1') == 7
-    base_folder = ['/Volumes/data1']; % Or on habilis
+    base_folder = '/Volumes/data1'; % Or on habilis
+    ants_registrations_dir = '/Users/lab/Downloads/ants_registrations';
 else
     error('Can''t find base folder, are we on habilis or the HPC?');
 end
@@ -41,7 +44,6 @@ end
 
 cfg = decoding_defaults;
 
-spreadsheetFile = '/Volumes/data1/Implicit_Learning/sentence_reading_analysis/Sentence reading_newtrialproc_102319_edited by MY for SPM_Tom_edit_for_LSS.xlsx';
 sheetName = 'SPM_events';
 subjChar = num2str(subject_num, '%02d'); % later filepaths require two digit subject IDs
 T = readtable(spreadsheetFile, "Sheet", sheetName);
@@ -88,7 +90,7 @@ end
 cfg.files.name = names;
 cfg.files.label = labels;
 cfg.files.chunk = chunks;
-cfg.files.mask = ['/Users/lab/Downloads/ants_registrations/sentence_reading/' subjChar '/mask_epi.nii.gz'];
+cfg.files.mask = [ants_registrations_dir '/sentence_reading/' subjChar '/mask_epi.nii.gz'];
 
 %cfg.design = make_design_cv(cfg);
 cfg.design = make_design_cv(cfg);
@@ -128,8 +130,6 @@ if size(perms_done, 2) > 0
 end
 
 for perm_num=1:num_permutations
-    %cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(perm_num, '%.3d')]));
-    %cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_perm'),['perm' num2str(start_perm+perm_num-1, '%.3d')]));
     cfg.results.dir = char(fullfile(perm_results_dir,['perm' num2str(start_perm+perm_num-1, '%.3d')]));
     if ~isfolder(cfg.results.dir)
         mkdir(cfg.results.dir)
@@ -138,6 +138,8 @@ for perm_num=1:num_permutations
     cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one to number of contrasting trials in a block (12 vs 13)
     cfg.files.label = cfg.design.label(:,1);
     results = decoding(cfg);
+    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 end
 
 tEnd = toc(tStart);

@@ -1,4 +1,4 @@
-function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, window_type, contrast, results_dir)
+function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, results_dir, spreadsheetFile, window_type, contrast)
 
 % This function conducts a searchlight MVPA decoding analysis on the sentence reading task beta maps,
 % wherein a machine learning classifier is trained to distinguish, from a subject's BOLD activity patterns,
@@ -13,9 +13,10 @@ function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, wind
 
 % subject_num: Subject number of subject, will be converted to string
 % input_dir: Directory under which we can find subject folders
+% results_dir: Directory to save results in
+% spreadsheetFile: Excel spreadsheet with subject trial data (onsets + durations)
 % window_type: Directory under subject folders, what type of window was used to calculate betas
 % contrast: The contrast to run MVPA decoding analysis on, can be "AP," "CAOR," or "GUG"
-% results_dir: Directory under window_type to save results in (e.g. "TDT_results")
 
 % Notes:
 % - For contrasts "AP" or "CAOR" only use grammatical trials, while "GUG" uses all trials
@@ -25,9 +26,11 @@ function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, wind
 tStart = tic;
 
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
-    base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
+    base_folder = '/N/slate/brainevo/Implicit_Learning'; % If on slate
+    ants_registrations_dir = '/N/slate/brainevo/Implicit_Learning/ants_registrations';
 elseif exist('/Volumes/data1') == 7
-    base_folder = ['/Volumes/data1']; % Or on habilis
+    base_folder = '/Volumes/data1'; % Or on habilis
+    ants_registrations_dir = '/Users/lab/Downloads/ants_registrations';
 else
     error('Can''t find base folder, are we on habilis or the HPC?');
 end
@@ -45,7 +48,6 @@ end
 
 cfg = decoding_defaults;
 
-spreadsheetFile = '/Volumes/data1/Implicit_Learning/sentence_reading_analysis/Sentence reading_newtrialproc_102319_edited by MY for SPM_Tom_edit_for_LSS.xlsx';
 sheetName = 'SPM_events';
 subjChar = num2str(subject_num, '%02d'); % later filepaths require two digit subject IDs
 T = readtable(spreadsheetFile, "Sheet", sheetName);
@@ -92,7 +94,7 @@ end
 cfg.files.name = names;
 cfg.files.label = labels;
 cfg.files.chunk = chunks;
-cfg.files.mask = ['/Users/lab/Downloads/ants_registrations/sentence_reading/' subjChar '/mask_epi.nii.gz'];
+cfg.files.mask = [ants_registrations_dir '/sentence_reading/' subjChar '/mask_epi.nii.gz'];
 
 cfg.design = make_design_cv(cfg);
 cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one vs number of contrasting trials in a block (12 vs 13)
@@ -114,6 +116,8 @@ if ~isfolder(cfg.results.dir)
 end
 
 results = decoding(cfg);
+gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
 
 tEnd = toc(tStart);
 disp(['Running LORO CV on subject ' subjChar ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
