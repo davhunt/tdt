@@ -21,6 +21,9 @@ function [] = sentence_reading_decoding_permutations(subject_num, input_dir, spr
 
 tStart = tic;
 
+vox_radius = 3;
+num_workers = 10;
+
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
     base_folder = '/N/slate/brainevo/Implicit_Learning'; % If on slate
     ants_registrations_dir = '/N/slate/brainevo/Implicit_Learning/ants_registrations';
@@ -137,16 +140,17 @@ if size(perms_done, 2) > 0
 end
 
 parfor perm_num=1:num_permutations
-    cfg.results.dir = char(fullfile(perm_results_dir,['perm' num2str(start_perm+perm_num-1, '%.3d')]));
-    if ~isfolder(cfg.results.dir)
-        mkdir(cfg.results.dir)
+    cfg_copy = cfg;
+    cfg_copy.results.dir = char(fullfile(perm_results_dir,['perm' num2str(start_perm+perm_num-1, '%.3d')]));
+    if ~isfolder(cfg_copy.results.dir)
+        mkdir(cfg_copy.results.dir)
     end
-    cfg.design = perm_designs{perm_num};
-    cfg.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one to number of contrasting trials in a block (12 vs 13)
-    cfg.files.label = cfg.design.label(:,1);
-    results = decoding(cfg);
-    gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']);
-    delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    cfg_copy.design = perm_designs{perm_num};
+    cfg_copy.design.unbalanced_data = 'ok'; % number of training/testing trials of a type (A, CA, P, OR) may be off by one to number of contrasting trials in a block (12 vs 13)
+    cfg_copy.files.label = cfg_copy.design.label(:,1);
+    results = decoding(cfg_copy);
+    gzip([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
 end
 
 delete(gcp('nocreate'));
