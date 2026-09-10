@@ -1,4 +1,4 @@
-function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, results_dir, spreadsheetFile, window_type, contrast)
+function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, spreadsheetFile, window_type, contrast)
 
 % This function conducts a searchlight MVPA decoding analysis on the sentence reading task beta maps,
 % wherein a machine learning classifier is trained to distinguish, from a subject's BOLD activity patterns,
@@ -13,7 +13,6 @@ function [] = sentence_reading_decoding_real_labels(subject_num, input_dir, resu
 
 % subject_num: Subject number of subject, will be converted to string
 % input_dir: Directory under which we can find subject folders
-% results_dir: Directory to save results in
 % spreadsheetFile: Excel spreadsheet with subject trial data (onsets + durations)
 % window_type: Directory under subject folders, what type of window was used to calculate betas
 % contrast: The contrast to run MVPA decoding analysis on, can be "AP," "CAOR," or "GUG"
@@ -110,7 +109,7 @@ cfg.scale.method = 'min0max1';
 cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
 cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
 % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
-cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,results_dir));
+cfg.results.dir = char(fullfile(input_dir,subjChar,window_type,strcat(contrast,'_real')));
 if ~isfolder(cfg.results.dir)
     mkdir(cfg.results.dir)
 end
