@@ -1,4 +1,4 @@
-function [] = gng_decoding_roi(subject_num, num_cv_splits, subfolder, roi_file, results_dir)
+function [] = gng_decoding_roi(subject_num, num_cv_splits, subfolder, roi_file, results_dir, template_space)
 
 %% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
 
@@ -8,6 +8,8 @@ function [] = gng_decoding_roi(subject_num, num_cv_splits, subfolder, roi_file, 
 % subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
 % roi_file: ROI mask file (.nii)
 % results_dir: Directory under "subfolder" to save results in (i.e. "BA44+45/TDT_results")
+%    ^^^ Actually don't force results_dir to be under "subfolder," just as is
+% template_space: "native" or "mni," space that the ROI mask and wholebrain mask are in
 
 tStart = tic;
 
@@ -30,14 +32,14 @@ if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/spm12']));
     addpath(genpath([base_folder '/matlab_nifti_tools']));
 else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
-    addpath(genpath('/Users/lab/Downloads/spm12'));
-    addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
+    addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
+    addpath(genpath('/Users/brainevo/Downloads/spm12'));
+    addpath(genpath('/Users/brainevo/Downloads/matlab_nifti_tools'));
 end
 
 % Or on habilis...
-%addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-%addpath(genpath('/Users/lab/Downloads/spm12'));
+%addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+%addpath(genpath('/Users/brainevo/Downloads/spm12'));
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
@@ -58,18 +60,24 @@ for i = 1:56
     labelnames_arr{i} = eval(['labelname' num2str(i)]);
 end
 
-results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' results_dir];
+%results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' results_dir];
 if ~isfolder(results_dir)
     mkdir(results_dir);
 end
 
 % Intersect ROI w/ mask
-wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+if strcmpi(template_space, 'mni')
+    wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_mni.nii'];
+else
+    % Just assume native space
+    wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+end
 wholebrain_mask = load_untouch_nii(wholebrain_mask);
 roi_file_nii = load_untouch_nii(roi_file);
 wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii.img);
 roi_file_nii.img = wholebrain_mask_roi_intersect;
-wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask_tmp.nii']; % can overwrite this
+%wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask_tmp.nii']; % can overwrite this
+wholebrain_mask_roi_intersect_out = [results_dir '/intersect_mask_tmp.nii'];
 save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
 %cfg.files.mask = wholebrain_mask_roi_intersect_out;
 

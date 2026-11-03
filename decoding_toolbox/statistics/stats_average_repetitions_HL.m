@@ -6,8 +6,8 @@ function [] = stats_average_repetitions_HL(reps_folder, type)
 % the folder "TDT_results" that contains the "TDT_results_repXX" folders
 % type can be "real" (real data, just one directory) or "perm" (permuted data, many directories)
 
-if exist('/Users/lab/Downloads/matlab_nifti_tools') == 7
-    addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools')); % On Habilis
+if exist('/Users/brainevo/Downloads/matlab_nifti_tools') == 7
+    addpath(genpath('/Users/brainevo/Downloads/matlab_nifti_tools')); % On Habilis
 elseif exist('/N/slate/brainevo/Implicit_Learning/matlab_nifti_tools') == 7
     addpath(genpath('/N/slate/brainevo/Implicit_Learning/matlab_nifti_tools')); % On Quartz/HPC
 else

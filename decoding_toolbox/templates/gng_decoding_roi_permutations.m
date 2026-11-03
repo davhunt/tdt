@@ -30,9 +30,9 @@ if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/spm12']));
     addpath(genpath([base_folder '/matlab_nifti_tools']));
 else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
-    addpath(genpath('/Users/lab/Downloads/spm12'));
-    addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
+    addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
+    addpath(genpath('/Users/brainevo/Downloads/spm12'));
+    addpath(genpath('/Users/brainevo/Downloads/matlab_nifti_tools'));
 end
 
 % create perm dir, write to log
@@ -44,8 +44,8 @@ parameters_info = sprintf(['Permutations for subject %s: %d CV splits, searchlig
 writelines(parameters_info, info_txt, WriteMode="append");
 
 % Or on habilis...
-%addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-%addpath(genpath('/Users/lab/Downloads/spm12'));
+%addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+%addpath(genpath('/Users/brainevo/Downloads/spm12'));
 
 % Set up unpermuted labels
 labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';

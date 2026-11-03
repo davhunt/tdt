@@ -8,10 +8,10 @@
 % Make sure the decoding toolbox and your favorite software (SPM or AFNI)
 % are on the Matlab path (e.g. addpath('/home/decoding_toolbox') )
 % TDT
-addpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')
+addpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')
 assert(~isempty(which('decoding_defaults.m', 'function')), 'TDT not found in path, please add')
 % SPM/AFNI
-addpath('/Users/lab/Downloads/spm12')
+addpath('/Users/brainevo/Downloads/spm12')
 assert((~isempty(which('spm.m', 'function')) || ~isempty(which('BrikInfo.m', 'function'))) , 'Neither SPM nor AFNI found in path, please add (or remove this assert if you really dont need to read brain images)')
 
 % Set defaults
@@ -22,17 +22,17 @@ cfg.analysis = 'searchlight'; % standard alternatives: 'wholebrain', 'ROI' (pass
 cfg.searchlight.radius = 3; % use searchlight of radius 3 (by default in voxels), see more details below
 
 % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
-cfg.results.dir = '/Users/lab/Downloads/Haxby2001_Tutorial_dataset_openneuro/tdt_results';
+cfg.results.dir = '/Users/brainevo/Downloads/Haxby2001_Tutorial_dataset_openneuro/tdt_results';
 
 % Set the filepath where your SPM.mat and all related betas are, e.g. 'c:\exp\glm\model_button'
-beta_loc = '/Users/lab/Downloads/Haxby2001_Tutorial_dataset_openneuro/SPM_Results_1';
+beta_loc = '/Users/brainevo/Downloads/Haxby2001_Tutorial_dataset_openneuro/SPM_Results_1';
 
 % Set the filename of your brain mask (or your ROI masks as cell matrix) 
 % for searchlight or wholebrain e.g. 'c:\exp\glm\model_button\mask.img' OR 
 % for ROI e.g. {'c:\exp\roi\roimaskleft.img', 'c:\exp\roi\roimaskright.img'}
 % You can also use a mask file with multiple masks inside that are
 % separated by different integer values (a "multi-mask")
-cfg.files.mask = '/Users/lab/Downloads/Haxby2001_Tutorial_dataset_openneuro/SPM_Results_1/mask.nii';
+cfg.files.mask = '/Users/brainevo/Downloads/Haxby2001_Tutorial_dataset_openneuro/SPM_Results_1/mask.nii';
 
 % Set the label names to the regressor names which you want to use for 
 % decoding, e.g. 'button left' and 'button right'

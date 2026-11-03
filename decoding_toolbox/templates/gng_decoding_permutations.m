@@ -25,17 +25,17 @@ end
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
 else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
+    addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
 end
 if exist([base_folder '/spm12']) == 7
     addpath(genpath([base_folder '/spm12']));
 else
-    addpath(genpath('/Users/lab/Downloads/spm12'))
+    addpath(genpath('/Users/brainevo/Downloads/spm12'))
 end
 
 % Or on habilis...
-%addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-%addpath(genpath('/Users/lab/Downloads/spm12'));
+%addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+%addpath(genpath('/Users/brainevo/Downloads/spm12'));
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 base_folder = ['/N/project/brainevo']; % overwrite base_folder to write in /N/project/brainevo so we have enough space
 %%%%%%%%%%%%%%%%%%%%%%%%%%

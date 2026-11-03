@@ -26,7 +26,7 @@ if exist('/N/slate/brainevo/Implicit_Learning') == 7
     ants_registrations_dir = '/N/slate/brainevo/Implicit_Learning/ants_registrations';
 elseif exist('/Volumes/data1') == 7
     base_folder = '/Volumes/data1'; % Or on habilis
-    ants_registrations_dir = '/Users/lab/Downloads/ants_registrations';
+    ants_registrations_dir = '/Users/brainevo/Downloads/ants_registrations';
 else
     error('Can''t find base folder, are we on habilis or the HPC?');
 end
@@ -34,12 +34,12 @@ end
 if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
     addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
 else
-    addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
+    addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')) % habilis
 end
 if exist([base_folder '/spm12']) == 7
     addpath(genpath([base_folder '/spm12']));
 else
-    addpath(genpath('/Users/lab/Downloads/spm12'))
+    addpath(genpath('/Users/brainevo/Downloads/spm12'))
 end
 
 cfg = decoding_defaults;

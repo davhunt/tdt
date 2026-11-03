@@ -1,0 +1,165 @@
+function [] = gng_decoding_roi_chunk_strength_analysis(subject_num, num_cv_splits, subfolder, roi_file, results_dir, template_space)
+
+%% Performs MVPA decoding analysis with TDT using an ROI mask instead of multiple "searchlights"
+%% Analyze high chunk strength and low chunk strength trials separately, see if there's a difference in classifier performance
+
+% subject_num: Subject number of subject, will be converted to string
+% num_permutations: Number of permutations to do, each permutation will have the same random shuffling of labels (but maybe different assignments of data to folds)
+% num_cv_splits: Number of different fold assignments/CVs to do per permutation, should be ~ 5 - 10. https://www.sciencedirect.com/science/article/pii/S1053811921004225
+% subfolder: Folder under "MVPA" to set as working dir, save results in (e.g. "durations_unsmoothed")
+% roi_file: ROI mask file (.nii)
+% results_dir: Directory under "subfolder" to save results in (i.e. "BA44+45/TDT_results")
+%    ^^^ Actually don't force results_dir to be under "subfolder," just as is
+% template_space: "native" or "mni," space that the ROI mask and wholebrain mask are in
+
+tStart = tic;
+
+% set global parameters
+subject_num = num2str(subject_num, '%03d');
+vox_radius = 3;
+%subfolder = 'breakpoint_rts_unsmoothed_native';
+%num_workers = 34; % could pass this in to function?
+[~, roi_basename, ~] = fileparts(roi_file);
+
+if exist('/N/slate/brainevo/Implicit_Learning') == 7
+    base_folder = ['/N/slate/brainevo/Implicit_Learning']; % If on slate
+elseif exist('/Volumes/data1') == 7
+    base_folder = ['/Volumes/data1']; % Or on habilis
+else
+    error('Can''t find base folder, are we on habilis or the HPC?');
+end
+
+if exist([base_folder '/tdt_3.999I/decoding_toolbox']) == 7 % slate
+    addpath(genpath([base_folder '/tdt_3.999I/decoding_toolbox']));
+    addpath(genpath([base_folder '/spm12']));
+    addpath(genpath([base_folder '/matlab_nifti_tools']));
+else
+    addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox')); % habilis
+    addpath(genpath('/Users/brainevo/Downloads/spm12'));
+    addpath(genpath('/Users/brainevo/Downloads/matlab_nifti_tools'));
+end
+
+% Or on habilis...
+%addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+%addpath(genpath('/Users/brainevo/Downloads/spm12'));
+
+% Set up unpermuted labels
+labelname1 = 'HGa'; labelname2 = 'HGb'; labelname3 = 'HGc'; labelname4 = 'HGd'; labelname5 = 'HGe'; labelname6 = 'HGf'; labelname7 = 'HGg'; labelname8 = 'HGh'; labelname9 = 'HGi'; labelname10 = 'HGj'; labelname11 = 'HGk'; labelname12 = 'HGl'; labelname13 = 'HGm'; labelname14 = 'HGn';
+% 14 high chunk-strength grammatical
+labelname15 = 'HNGa'; labelname16 = 'HNGb'; labelname17 = 'HNGc'; labelname18 = 'HNGd'; labelname19 = 'HNGe'; labelname20 = 'HNGf'; labelname21 = 'HNGg'; labelname22 = 'HNGh'; labelname23 = 'HNGi'; labelname24 = 'HNGj'; labelname25 = 'HNGk'; labelname26 = 'HNGl'; labelname27 = 'HNGm'; labelname28 = 'HNGn';
+% 14 high chunk-strength nongrammatical
+labelname29 = 'LGa'; labelname30 = 'LGb'; labelname31 = 'LGc'; labelname32 = 'LGd'; labelname33 = 'LGe'; labelname34 = 'LGf'; labelname35 = 'LGg'; labelname36 = 'LGh'; labelname37 = 'LGi'; labelname38 = 'LGj'; labelname39 = 'LGk'; labelname40 = 'LGl'; labelname41 = 'LGm'; labelname42 = 'LGn';
+% 14 low chunk-strength grammatical
+labelname43 = 'LNGa'; labelname44 = 'LNGb'; labelname45 = 'LNGc'; labelname46 = 'LNGd'; labelname47 = 'LNGe'; labelname48 = 'LNGf'; labelname49 = 'LNGg'; labelname50 = 'LNGh'; labelname51 = 'LNGi'; labelname52 = 'LNGj'; labelname53 = 'LNGk'; labelname54 = 'LNGl'; labelname55 = 'LNGm'; labelname56 = 'LNGn';
+% 14 low chunk-strength nongrammatical
+
+labelvalue1 = 1; % value for grammatical
+labelvalue2 = -1; % value for non-grammatical
+
+labels_arr = zeros(1,56); labels_arr(1:14) = labelvalue1; labels_arr(15:28) = labelvalue2; labels_arr(29:42) = labelvalue1; labels_arr(43:56) = labelvalue2;
+H_labels_arr = labels_arr(1:28); L_labels_arr = labels_arr(29:56);
+H_labelnames_arr = {}; L_labelnames_arr = {};
+for i = 1:28
+    H_labelnames_arr{i} = eval(['labelname' num2str(i)]);
+end
+for i = 29:56
+    L_labelnames_arr{i-28} = eval(['labelname' num2str(i)]);
+end
+
+%results_dir = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/' results_dir];
+if ~isfolder(results_dir)
+    mkdir(results_dir);
+end
+
+% Intersect ROI w/ mask
+if strcmpi(template_space, 'mni')
+    wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_mni.nii'];
+else
+    % Just assume native space
+    wholebrain_mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+end
+wholebrain_mask = load_untouch_nii(wholebrain_mask);
+roi_file_nii = load_untouch_nii(roi_file);
+wholebrain_mask_roi_intersect = uint8(wholebrain_mask.img) .* uint8(roi_file_nii.img);
+roi_file_nii.img = wholebrain_mask_roi_intersect;
+%wholebrain_mask_roi_intersect_out = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/brocas_rois/intersect_mask_tmp.nii']; % can overwrite this
+wholebrain_mask_roi_intersect_out = [results_dir '/intersect_mask_tmp.nii'];
+save_untouch_nii(roi_file_nii, wholebrain_mask_roi_intersect_out);
+%cfg.files.mask = wholebrain_mask_roi_intersect_out;
+
+myCluster = parcluster('local');
+parpool(myCluster.NumWorkers); % On habilis should be "6" could be much more on HPC but certainly don't need more than 6 for real-labelled decoding
+sc = parallel.pool.Constant(RandStream('Threefry', 'Seed', 'shuffle'));
+
+parfor spl = 1:num_cv_splits
+    % set up RNG seed
+    stream = sc.Value;
+    stream.Substream = spl;
+
+    % Initialize cfg struct and fill in decoding parameters
+    cfg = decoding_defaults;
+    cfg.plot_design = 0; % no plot with parfor
+    cfg.verbose = 0;
+    cfg.analysis = 'ROI'; % standard alternatives: 'wholebrain', 'ROI' (pass ROIs in cfg.files.mask, see below)
+    cfg.searchlight.radius = vox_radius;
+    cfg.searchlight.spherical = 1;
+    cfg.scale.method = 'min0max1';
+    cfg.scale.estimation = 'all'; % scaling across all data is equivalent to no scaling (i.e. will yield the same results), it only changes the data range which allows libsvm to compute faster
+    cfg.results.output = {'accuracy_minus_chance','confusion_matrix'};
+    % Set the output directory where data will be saved, e.g. 'c:\exp\results\buttonpress'
+
+
+    % Set beta_loc and mask
+    beta_loc = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder];
+    regressor_names = design_from_spm(beta_loc);
+    H_regressor_names = regressor_names(:,[1:28 57:67]);
+    L_regressor_names = regressor_names(:,[29:67]);
+    cfg.files.mask = wholebrain_mask_roi_intersect_out;
+    %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask.nii'];
+    %cfg.files.mask = [base_folder '/Complex_seq_analysis/' subject_num '/MVPA/' subfolder '/mask_ants.nii']; % ANTs gray matter mask from antsBrainExtraction.sh
+
+    % Extract all information for the cfg.files structure (labels will be [1 -1] if not changed above)
+    cfg_H = decoding_describe_data(cfg,H_labelnames_arr,H_labels_arr,H_regressor_names,beta_loc);
+    cfg_L = decoding_describe_data(cfg,L_labelnames_arr,L_labels_arr,L_regressor_names,beta_loc);
+    %cfg = decoding_describe_data(cfg,labelnames_arr,labels_arr,regressor_names,beta_loc);
+
+    %rng('shuffle') % make sure randsample in generating the design below is truly random
+    %cfg_H = cfg; cfg_L = cfg;
+    cfg_H.design = make_design_GNG_by_chunk_strength(cfg_H, 0, stream, 'H'); % need to seed RNG in function % not permuted labels yet
+    cfg_L.design = make_design_GNG_by_chunk_strength(cfg_L, 0, stream, 'L'); % need to seed RNG in function % not permuted labels yet
+    cfg_H.files.chunk = cfg_H.design.chunk; cfg_H.design = rmfield(cfg_H.design, 'chunk');
+    cfg_L.files.chunk = cfg_L.design.chunk; cfg_L.design = rmfield(cfg_L.design, 'chunk');
+
+    cfg_H.results.dir = [results_dir '/H/' roi_basename '/TDT_results_rep' num2str(spl, '%.2d')];
+    cfg_L.results.dir = [results_dir '/L/' roi_basename '/TDT_results_rep' num2str(spl, '%.2d')];
+    if ~isfolder(cfg_H.results.dir)
+        mkdir(cfg_H.results.dir);
+    end
+    if ~isfolder(cfg_L.results.dir)
+        mkdir(cfg_L.results.dir);
+    end
+
+
+
+    %cfg.design.function.name = 'make_design_cv'; % ?
+    results = decoding(cfg_H);
+    results = decoding(cfg_L);
+    %movefile([cfg_copy.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii'], ...
+    %  [cfg_copy.results.dir '/res_accuracy_minus_chance.nii']);
+    %gzip([cfg.results.dir '/res_accuracy_minus_chance.nii']); % really just one value in whole image
+    %delete([cfg.results.dir '/res_accuracy_minus_chance.nii']);
+    delete([cfg.results.dir '/res_accuracy_minus_chance_intersect_mask_tmp.nii']);
+end
+
+delete(gcp('nocreate'))
+
+tEnd = toc(tStart);
+disp(['Running ' num2str(num_cv_splits) ' CV splits on subject ' num2str(subject_num) ' took ' num2str(tEnd, '%.2f') ' seconds. Done.'])
+
+
+
+
+
+
+
+end

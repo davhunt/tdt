@@ -17,8 +17,8 @@ tStart = tic;
 % Kai, 2016/07/25
  
 %% Check that SPM and TDT are available on the path
-addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-addpath(genpath('/Users/lab/Downloads/spm12'));
+addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+addpath(genpath('/Users/brainevo/Downloads/spm12'));
 
 [filepath,name,ext] = fileparts(roi_mask_file);
 

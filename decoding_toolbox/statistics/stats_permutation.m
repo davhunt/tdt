@@ -42,7 +42,7 @@ function p = stats_permutation(results_folder, perms_folder, nreps, nperms, tail
 % tail: 'right'
 %%%%%%%%%% build n_correct, reference matricces from input dirs
 
-addpath(genpath('/Users/lab/Downloads/matlab_nifti_tools'));
+addpath(genpath('/Users/brainevo/Downloads/matlab_nifti_tools'));
 
 avgs_nii = load_untouch_nii([results_folder '/TDT_results_avg_allreps/res_accuracy_minus_chance.nii.gz']); % from stats_average_repetitions
 orig_sz = size(avgs_nii.img);

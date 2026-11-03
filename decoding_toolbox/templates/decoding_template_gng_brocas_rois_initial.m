@@ -14,12 +14,12 @@ tStart = tic;
 % Make sure the decoding toolbox and your favorite software (SPM or AFNI)
 % are on the Matlab path (e.g. addpath('/home/decoding_toolbox') )
 % TDT
-addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-% addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
+addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+% addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
 assert(~isempty(which('decoding_defaults.m', 'function')), 'TDT not found in path, please add')
 % SPM/AFNI
-%addpath('/Users/lab/Downloads/spm12')
-addpath(genpath('/Users/lab/Downloads/spm12'));
+%addpath('/Users/brainevo/Downloads/spm12')
+addpath(genpath('/Users/brainevo/Downloads/spm12'));
 assert((~isempty(which('spm.m', 'function')) || ~isempty(which('BrikInfo.m', 'function'))) , 'Neither SPM nor AFNI found in path, please add (or remove this assert if you really dont need to read brain images)')
 %%%%%%addpath(genpath('/Applications/MATLAB_R2023b.app/toolbox/stats')); %%%%%%%%%%%%%%%%% unrecognized file or variable eml_is_const
 [filepath,name,ext] = fileparts(roi_mask_file);

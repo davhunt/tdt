@@ -17,8 +17,8 @@ tStart = tic;
 % Kai, 2016/07/25
  
 %% Check that SPM and TDT are available on the path
-addpath(genpath('/Users/lab/Downloads/tdt_3.999I/decoding_toolbox'));
-addpath(genpath('/Users/lab/Downloads/spm12'));
+addpath(genpath('/Users/brainevo/Downloads/tdt_3.999I/decoding_toolbox'));
+addpath(genpath('/Users/brainevo/Downloads/spm12'));
 
 %%%% cv_splits can be row vector i.e. [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], or just a number (i.e. 4)
 
