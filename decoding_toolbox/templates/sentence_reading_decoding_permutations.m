@@ -21,6 +21,9 @@ function [] = sentence_reading_decoding_permutations(subject_num, input_dir, spr
 
 tStart = tic;
 
+vox_radius = 3;
+num_workers = 10;
+
 if exist('/N/slate/brainevo/Implicit_Learning') == 7
     base_folder = '/N/slate/brainevo/Implicit_Learning'; % If on slate
     ants_registrations_dir = '/N/slate/brainevo/Implicit_Learning/ants_registrations';
